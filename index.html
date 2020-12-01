@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currency informer</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    
+    <section class="header">
+
+    </section>
+
+    <section class="current_rates">
+        <div class="rates_header">Курсы валют Национального банка Республики Беларусь</div>
+        <div class="current_rates_list">
+            <div class="list_element">
+                <img class="flag" src="img/usa.png"></img>
+                <div class="info">
+                    <div class="currency_name">USD</div>
+                    <div class="currency_rate" id="usd_rate"></div>
+                    <div class="currency_change_sign" id="usd_compare">
+                            <img src="img/greenArrow.png" alt="no_image" id="usd_arrow">
+                            <div class="compared_value" id="usd_compared_value"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="list_element">
+                <img class="flag" src="img/euro.png"></img>
+                <div class="info">
+                    <div class="currency_name">EUR</div>
+                    <div class="currency_rate" id="eur_rate"></div>
+                    <div class="currency_change_sign" id="eur_compare">
+                        <img src="img/greenArrow.png" alt="no_image" id="eur_arrow">
+                        <div class="compared_value" id="eur_compared_value"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="list_element">
+                <img class="flag" src="img/russia.png" ></img>
+                <div class="info">
+                    <div class="currency_name">RUB</div>
+                    <div class="currency_rate" id="rub_rate"></div>
+                    <div class="currency_change_sign" id="rub_compare">
+                        <img src="img/greenArrow.png" alt="no_image" id="rub_arrow">
+                        <div class="compared_value" id="rub_compared_value"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="content">
+        
+        <div class="schedule_wrapper">
+            <figure class="highcharts-figure">
+                <div id="container"></div>
+                <p class="highcharts-description">
+                    Выберите все данные необходимые для построения графика...
+                </p>
+            </figure>
+        </div>
+        <div class="input_wrapper">
+            <div class="inputs">
+                <div class="inputs_header">Выберите валюту и период для построения графика</div>
+                <select name="currency_select" id="currency_selector" class="currency_selector">
+
+                </select>
+                <div class="date_selector" >
+                    <label class="date_label" for="">с</label>
+                    <input type="date" id="start_date">
+                </div>
+                <div class="date_selector" >
+                    <label class="date_label" for="">по</label>
+                    <input type="date" id="end_date">
+                </div>
+                <div class="inputs_header">Детализация данных</div>
+                <form action="" class="radio_buttons" >
+                    <p><input type="radio" name="frequency" checked value="day">День</p>
+                    <p><input type="radio" name="frequency" value="week">Неделя</p>
+                    <p><input type="radio" name="frequency" value="month">Месяц</p>
+                    <p><input type="radio" name="frequency" value="year">Год</p>
+                </form>
+
+                <div class="btn_wrapper">
+                    <button class='graphic_btn' onclick='buildDiagramm()'>Построить график</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="footer">
+        
+    </section>
+    
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/series-label.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment.min.js"></script>
+    <script>
+        moment().format();
+    </script>
+    <script src="app.js"></script>
+</body>
+</html>
