@@ -1,7 +1,11 @@
 'use strict'
-let currencies = {}; 
-// current rates from NBRB
+let online = window.navigator.onLine; // checking internet connection true/false
+let currencies = {};
+if(!online) {
+    alert("Отсутсвует подключение к интернету! Отображены последние, ранее сохраненные курсы.");
+}
 
+// current rates from NBRB
 const currRatesUrl = 'https://www.nbrb.by/api/exrates/rates?periodicity=0';
 const currRatesWorker = new Worker('workers/current_rates_worker.js');
 const currentUsd = document.getElementById('usd_rate');
@@ -85,6 +89,7 @@ function arrowPrint(el, value) {
 //
 compareToYesterday();
 
+
 // get currencies names into the selector on  the page
 const currenciesNamesUrl = 'https://www.nbrb.by/api/exrates/currencies';
 const currenciesNamesWorker = new Worker('workers/allCurrenciesNamesWorker.js');
@@ -127,6 +132,7 @@ function sortEqualCurrencyNames(arr) {
 
 getCurrenciesNames();
 
+//button's click event 
 function buildDiagramm() {
     const currency = currencies[selector.value];
     const startDateElement = document.getElementById('start_date');
@@ -134,6 +140,7 @@ function buildDiagramm() {
     const startDate = moment(startDateElement.value);
     const endDate = moment(endDateElement.value);
     const periodicity = document.querySelector('input[name="frequency"]:checked').value;
+    let periodicityView = '';
     let urls = currency.payload.map(p => {
         const currStartDate = moment(p.startDate);
         const currEndDate = moment(p.endDate);
@@ -145,80 +152,151 @@ function buildDiagramm() {
         } return requests;
     }).flat();
 
-   Promise.all(urls.map(url => 
-    fetch(url)
-    .then(response => response.json())
-    .then(result =>{
-        console.log(result);
-    })
-    .catch(err => console.log(err))
-    ));
+    let dataArray = [];
 
-}
+    async function startFetchUrls(urls) {
+        let dataForSchedule = [];
+        await Promise.all(urls.map(url => 
+            fetch(url)
+            .then(response => response.json())
+            .then(result =>{
+                result.forEach(el => {
+                    dataForSchedule.push(el);
+                })
+            })
+            .catch(err => console.error(err))
+        ));
+        await showSchedule(dataForSchedule, periodicity, endDate, currency); 
+    }
 
-function showSchedule(data, periodicity) {
-    const startDate = moment(data[0].Date).format('YYYY-MM-DD');
-    const endDate = moment(data[data.length - 1].Date).format('YYYY-MM-DD');
-    
-    let schedule = Highcharts.chart('container', {
+    startFetchUrls(urls);
 
-        title: {
-            text: 'Solar Employment Growth by Sector, 2010-2016'
-        },
-    
-        subtitle: {
-            text: 'Source: thesolarfoundation.com'
-        },
-    
-        yAxis: {
-            title: {
-                text: 'Number of Employees'
-            }
-        },
-    
-        xAxis: {
-            accessibility: {
-                rangeDescription: 'Range: 2010 to 2017'
-            }
-        },
-    
-        legend: {
-            layout: 'vertical',
-            align: 'right',
-            verticalAlign: 'middle'
-        },
-    
-        plotOptions: {
-            series: {
-                label: {
-                    connectorAllowed: false
-                },
-                pointStart: 2010
-            }
-        },
-    
-        series: [{
-            name: 'Installation',
-            data: [43934, 52503, 57177, 69658, 97031, 119931, 137133, 154175]
-        }],
-    
-        responsive: {
-            rules: [{
-                condition: {
-                    maxWidth: 500
-                },
-                chartOptions: {
-                    legend: {
-                        layout: 'horizontal',
-                        align: 'center',
-                        verticalAlign: 'bottom'
+    function showSchedule(data, periodicity, endDate, currency) {
+        const lastDate = moment(endDate).format('YYYY-MM-DD');
+        let curName = currency;
+        let currencyRates = [];
+        let currencyDates = [];
+        if(periodicity === 'day') {
+            periodicityView = 'День'
+            data.forEach(el => {
+                if(moment(el.Date).isBefore(lastDate) || moment(el.Date).isSame(lastDate)) {
+                    currencyDates.push(moment(el.Date).format('YYYY-MM-DD'));
+                    currencyRates.push(el.Cur_OfficialRate);
+                }
+            })
+        }
+        if(periodicity === 'month') {
+            periodicityView = 'Месяц'
+            let counter = 0;
+            let summ = 0;
+            let month = 0;
+            for(let i = 0; i < data.length; i++) {
+                if(moment(data[i].Date).isBefore(lastDate) || moment(data[i].Date).isSame(lastDate)) {
+                    counter++;
+                    summ += data[i].Cur_OfficialRate;
+                    if(counter === 30) {
+                        month++;
+                        currencyRates.push(+(summ / 30).toFixed(4));
+                        currencyDates.push(month);
+                        counter = 0;
+                        summ = 0;
                     }
                 }
-            }]
+            }
         }
+        if(periodicity === 'year') {
+            periodicityView = 'Год'
+            let counter = 0;
+            let summ = 0;
+            let year = 0;
+            for(let i = 0; i < data.length; i++) {
+                if(moment(data[i].Date).isBefore(lastDate) || moment(data[i].Date).isSame(lastDate)) {
+                    if(moment(data[i].Date).format('YYYY') !== moment(data[i + 1].Date).format('YYYY')) {
+                        year++;
+                        currencyRates.push(+(summ / counter).toFixed(4));
+                        currencyDates.push(year);
+                        summ = 0;
+                        counter = 0;
+                    } else if(moment(data[i].Date).isSame(lastDate)) {
+                        year++;
+                        currencyRates.push(+(summ / counter).toFixed(4));
+                        currencyDates.push(year);
+                        summ = 0;
+                        counter = 0;
+                    } else {
+                        counter++;
+                        summ += data[i].Cur_OfficialRate;
+                    }
+                }
+            }
+        }
+
+        let schedule = Highcharts.chart('container', {
     
-    });
+            title: {
+                text: `График отношения белорусского рубля к ${currency.CurName} за выбранный период`
+            },
+        
+            subtitle: {
+                text: 'Источник: Национальный банк Республики Беларусь'
+            },
+        
+            yAxis: {
+                title: {
+                    text: 'BYN'
+                } 
+            },
+        
+            xAxis: {
+                title: {
+                    text: `Выбранная периодичность отображения - ${periodicityView}`
+                },
+                categories: currencyDates
+            },
+
+            legend: {
+                layout: 'vertical',
+                align: 'right',
+                verticalAlign: 'middle'
+            },
+        
+            plotOptions: {
+                series: {
+                    label: {
+                        connectorAllowed: false
+                    },
+                }
+            },
+        
+            series: [{
+                name: currency.CurName,
+                data: currencyRates
+            }],
+        
+            responsive: {
+                rules: [{
+                    condition: {
+                        maxWidth: 500
+                    },
+                    chartOptions: {
+                        legend: {
+                            layout: 'horizontal',
+                            align: 'center',
+                            verticalAlign: 'bottom'
+                        }
+                    }
+                }]
+            }
+        });
+    }
 }
+//end schedule function
+
+
+
+
+
+
 
 
 
