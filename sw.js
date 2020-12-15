@@ -13,8 +13,7 @@ self.addEventListener('install', function(event) {
                 '../img/redArrow.png',
                 '../img/russia.png',
                 '../img/usa.png',
-                '../workers/current_rates_worker.js',
-                '../workers/yesterdayRatesWorker.js'
+                '../workers/webWorker.js',
             ])
         }) 
     );
@@ -23,7 +22,6 @@ self.addEventListener('install', function(event) {
 self.addEventListener('fetch', (event) => {
     let dataUrl = 'https://www.nbrb.by/api/exrates/rates?periodicity=0';
     if(event.request.url.indexOf(dataUrl) === 0) {
-        // Data handler cod will be here
         event.respondWith(
             fetch(event.request)
             .then(function(response) {
