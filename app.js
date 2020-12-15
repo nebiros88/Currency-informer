@@ -23,6 +23,20 @@ const rubDifferenceArea = document.getElementById('rub_compared_value');
 const currenciesNamesUrl = 'https://www.nbrb.by/api/exrates/currencies';
 const currenciesNamesFuncName = 'showCurrenciesNamesInSelector';
 const selector = document.getElementById('currency_selector');
+const startDateElement = document.getElementById('start_date');
+const endDateElement = document.getElementById('end_date');
+const periodicity = {
+    day: 'day',
+    month: 'month',
+    year: 'year'
+};
+const defaultSettings = {
+    currency: 'EUR',
+    startDate: () => moment().startOf('year'),
+    endDate: () => moment(),
+    period: periodicity.year
+}
+
 
 function getCurrentRates() {
     webWorker.postMessage([currentRatesUrl, currentRatesFuncName]);
@@ -48,6 +62,7 @@ webWorker.addEventListener('message', function (e) {
             break;
         case 'showCurrenciesNamesInSelector':
             showCurrenciesNamesInSelector(data);
+            renderDefaultData();
             break;
         default:
             console.log('Something wrong with worker postmessage');
@@ -107,7 +122,6 @@ function arrowPrint(el, value) {
 function showCurrenciesNamesInSelector(data) {
     let sortedData = sortEqualCurrencyNames(data);
     currencies = sortedData;
-    let namesArray = [];
     Object.values(sortedData).sort((a, b) => {
         if (a.CurName < b.CurName) return -1;
         if (a.CurName > b.CurName) return 1;
@@ -118,6 +132,15 @@ function showCurrenciesNamesInSelector(data) {
         element.value = el.currency;
         selector.appendChild(element);
     })
+
+}
+
+function renderDefaultData() {
+    const yearStart = defaultSettings.startDate();
+    startDateElement.value = yearStart.format('YYYY-MM-DD');
+    endDateElement.value = defaultSettings.endDate().format('YYYY-MM-DD');
+    selector.value = defaultSettings.currency;
+    buildDiagramm(currencies[defaultSettings.currency], yearStart, defaultSettings.endDate(), defaultSettings.period);
 }
 
 function sortEqualCurrencyNames(arr) {
@@ -143,24 +166,35 @@ getCurrentRates();
 compareToYesterday();
 getCurrenciesNames();
 
-function buildDiagramm() {
-    const currency = currencies[selector.value];
-    const startDateElement = document.getElementById('start_date');
-    const endDateElement = document.getElementById('end_date');
-    const startDate = moment(startDateElement.value);
-    const endDate = moment(endDateElement.value);
-    const periodicity = document.querySelector('input[name="frequency"]:checked').value;
+function buildDiagramm(currency, startDate, endDate, period) {
     const urls = getUrls(currency, startDate, endDate);
 
     startFetchUrls(urls)
-        .then(result => showChart(result.flat(), periodicity, endDate, currency))
+        .then(result => showChart(result.flat(), period, endDate, currency))
         .catch(err => console.error(err));
 
 }
+function onRenderChartBtnCkick() {
+    const currency = currencies[selector.value];
+    const startDate = moment(startDateElement.value);
+    const endDate = moment(endDateElement.value);
+    const period = document.querySelector('input[name="frequency"]:checked').value;
+    buildDiagramm(currency, startDate, endDate, period);
+}
+
+function onCurrencySelectorChange(event) {
+    const curCode = event.value;
+    const currency = currencies[curCode];
+    const starDate = currency.payload[0].startDate;
+    const endDate = currency.payload[currency.payload.length - 1].endDate;
+    startDateElement.setAttribute('min', moment(starDate).format('YYYY-MM-DD'));
+    endDateElement.setAttribute('max', moment.min(moment(endDate), moment()).format('YYYY-MM-DD'));
+}
+
 
 function generateDayData(data, lastDate, currencyData) {
     data.forEach(el => {
-        if (moment(el.Date).isSameOrBefore(lastDate)) {
+        if (moment(el.Date).isSameOrBefore(lastDate,'day')) {
             currencyData.push({
                 date: moment(el.Date),
                 dateStr: moment(el.Date).format('YYYY-MM-DD'),
@@ -175,7 +209,7 @@ function generateMonthData(data, lastDate, currencyData) {
     let summ = 0;
     let month = 0;
     for (let i = 0; i < data.length; i++) {
-        if (moment(data[i].Date).isSameOrBefore(lastDate)) {
+        if (moment(data[i].Date).isSameOrBefore(lastDate,'day')) {
             counter++;
             summ += data[i].Cur_OfficialRate;
             if (counter === 30) {
@@ -198,8 +232,7 @@ function generateYearData(data, lastDate, currencyData) {
     for (let i = 0; i < data.length; i++) {
         const curDate = moment(data[i].Date);
         if (curDate.isSameOrBefore(lastDate)) {
-            const nexDate = moment(data[i + 1].Date);
-            if (curDate.year() !== nexDate.year() || curDate.isSame(lastDate)) {
+            if (curDate.isSame(lastDate, 'day') || curDate.year() !== moment(data[i + 1].Date).year()) {
                 currencyData.push({
                     date: curDate,
                     dateStr: curDate.format('YYYY'),
@@ -235,19 +268,19 @@ function startFetchUrls(urls) {
     }))
 }
 
-function showChart(data, periodicity, endDate, currency) {
+function showChart(data, period, endDate, currency) {
     let periodicityView = '';
     const currencyData = [];
-    const lastDate = moment(endDate).format('YYYY-MM-DD');
-    if (periodicity === 'day') {
+    const lastDate = moment(endDate);
+    if (period === periodicity.day) {
         periodicityView = 'День';
         generateDayData(data, lastDate, currencyData);
     }
-    if (periodicity === 'month') {
+    if (period === periodicity.month) {
         periodicityView = 'Месяц';
         generateMonthData(data, lastDate, currencyData);
     }
-    if (periodicity === 'year') {
+    if (period === periodicity.year) {
         periodicityView = 'Год'
         generateYearData(data, lastDate, currencyData);
     }
@@ -255,8 +288,8 @@ function showChart(data, periodicity, endDate, currency) {
 }
 
 function dateComparator(cur1, cur2) {
-    if(cur1.date.isBefore(cur2.date)) return -1;
-    if(cur1.date.isAfter(cur2.date)) return 1;
+    if (cur1.date.isBefore(cur2.date)) return -1;
+    if (cur1.date.isAfter(cur2.date)) return 1;
     return 0;
 }
 
@@ -321,4 +354,5 @@ function renderChart(currency, periodicityView, currencyData) {
         }
     });
 }
-//end schedule function
+
+

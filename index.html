@@ -61,7 +61,7 @@
         <div class="input_wrapper">
             <div class="inputs">
                 <div class="inputs_header">Выберите валюту и период для построения графика</div>
-                <select name="currency_select" id="currency_selector" class="currency_selector">
+                <select name="currency_select" id="currency_selector" class="currency_selector" onchange="onCurrencySelectorChange(this)">
 
                 </select>
                 <div class="date_selector" >
@@ -74,13 +74,13 @@
                 </div>
                 <div class="inputs_header">Детализация данных</div>
                 <form action="" class="radio_buttons" >
-                    <p><input type="radio" name="frequency" checked value="day">День</p>
+                    <p><input type="radio" name="frequency" value="day">День</p>
                     <p><input type="radio" name="frequency" value="month">Месяц</p>
-                    <p><input type="radio" name="frequency" value="year">Год</p>
+                    <p><input type="radio" name="frequency" checked value="year">Год</p>
                 </form>
 
                 <div class="btn_wrapper">
-                    <button class='graphic_btn' onclick='buildDiagramm()'>Построить график</button>
+                    <button class='graphic_btn' onclick='onRenderChartBtnCkick()'>Построить график</button>
                 </div>
             </div>
         </div>
